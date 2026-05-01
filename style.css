@@ -163,6 +163,9 @@ button {
 }
 .mode-card:active { transform: scale(.97); }
 .mode-card:hover { border-color: rgba(255,255,255,.2); }
+.mode-card-wide { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+.mode-card-wide .mode-emoji { font-size: 28px; margin-right: 10px; }
+.mode-card-wide .mode-name { flex: 1; }
 .mode-emoji { font-size: 30px; }
 .mode-name { font-weight: 800; font-size: 15px; }
 .mode-desc { font-size: 12px; color: var(--muted); }

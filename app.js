@@ -31,6 +31,7 @@
     { id: "level8",       name: "LGS Kralı",        desc: "En yüksek seviyeye ulaştın",  emoji: "👑", check: s => s.level >= 8 },
     { id: "vocab_master", name: "Kelime Ustası",    desc: "1 turda 10/10 kelime",        emoji: "📚", check: s => s.perfectVocab },
     { id: "stem_master",  name: "Soru Kökü Ustası", desc: "1 turda 10/10 soru kökü",     emoji: "🎯", check: s => s.perfectStem },
+    { id: "sent_master",  name: "Cümle Ustası",     desc: "1 turda 10/10 cümle",         emoji: "💬", check: s => s.perfectSentence },
     { id: "daily_done",   name: "Günü Bitirdim",    desc: "Günlük hedefi tamamladın",    emoji: "🌈", check: s => s.dailyGoalsHit >= 1 },
     { id: "all_themes",   name: "Tüm Temalar",      desc: "Her tema için en az 1 tur",   emoji: "🌍", check: s => Object.keys(s.themesPlayed||{}).length >= 10 }
   ];
@@ -46,6 +47,7 @@
     totalWrong: 0,
     perfectVocab: false,
     perfectStem: false,
+    perfectSentence: false,
     dailyDate: todayKey(),
     dailyCorrect: 0,
     dailyGoalsHit: 0,
@@ -229,6 +231,14 @@
         pool.push({ kind: "stem", en: s.en, tr: s.tr, distractors: s.distractors, tip: s.tip });
       });
     }
+    if ((mode === "sentences" || mode === "mixed") && window.SENTENCES) {
+      const themeSet = new Set(themes);
+      window.SENTENCES.forEach(s => {
+        if (state.selectedTheme === "all" || themeSet.has(s.theme)) {
+          pool.push({ kind: "sentence", themeKey: s.theme, en: s.en, tr: s.tr, distractors: s.distractors });
+        }
+      });
+    }
     return pool;
   }
 
@@ -246,6 +256,10 @@
       $("#quizTag").textContent = "Kelime";
       $("#quizQuestion").textContent = q.en;
       $("#quizTip").textContent = "Türkçe karşılığını seç";
+    } else if (q.kind === "sentence") {
+      $("#quizTag").textContent = "Cümle";
+      $("#quizQuestion").textContent = q.en;
+      $("#quizTip").textContent = "Cümlenin doğru Türkçesini seç";
     } else {
       $("#quizTag").textContent = "Soru Kökü";
       $("#quizQuestion").textContent = q.en;
@@ -297,7 +311,7 @@
       pool = wrong.map(t => ({ text: t, correct: false }));
       pool.push({ text: q.tr, correct: true });
     } else {
-      // Stem: doğru + verilen 3 çeldirici
+      // Stem ve Sentence: doğru + verilen 3 çeldirici
       pool = q.distractors.map(d => ({ text: d, correct: false }));
       pool.push({ text: q.tr, correct: true });
     }
@@ -369,16 +383,18 @@
       const cheers = ["🎉 Süpersin!", "🌟 Harika!", "🚀 Mükemmel!", "🔥 Aferin!", "💪 Devam et!", "✨ Çok iyi!"];
       $("#feedbackEmoji").textContent = ["🎉","🌟","🚀","🔥","💪","✨"][Math.floor(Math.random()*6)];
       $("#feedbackText").textContent = cheers[Math.floor(Math.random()*cheers.length)] + ` +${gain} XP`;
-      $("#feedbackExplain").textContent = q.kind === "vocab"
-        ? `${q.en} = ${q.tr}`
-        : `${q.tr}` + (q.tip ? ` • İpucu: ${q.tip}` : "");
+      $("#feedbackExplain").textContent = explainText(q);
     } else {
       $("#feedbackEmoji").textContent = "💡";
       $("#feedbackText").textContent = "Doğrusunu öğrendin!";
-      $("#feedbackExplain").textContent = q.kind === "vocab"
-        ? `${q.en} = ${q.tr}`
-        : `${q.tr}` + (q.tip ? ` • İpucu: ${q.tip}` : "");
+      $("#feedbackExplain").textContent = explainText(q);
     }
+  }
+
+  function explainText(q) {
+    if (q.kind === "vocab") return `${q.en} = ${q.tr}`;
+    if (q.kind === "sentence") return `“${q.en}” → ${q.tr}`;
+    return `${q.tr}` + (q.tip ? ` • İpucu: ${q.tip}` : "");
   }
 
   $("#nextBtn").addEventListener("click", nextQuestion);
@@ -396,6 +412,7 @@
     if (currentQuiz.correct === currentQuiz.questions.length) {
       if (currentQuiz.questions.every(q => q.kind === "vocab")) state.perfectVocab = true;
       if (currentQuiz.questions.every(q => q.kind === "stem")) state.perfectStem = true;
+      if (currentQuiz.questions.every(q => q.kind === "sentence")) state.perfectSentence = true;
     }
     saveState();
 
