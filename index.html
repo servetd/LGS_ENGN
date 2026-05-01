@@ -30,6 +30,10 @@
           <span class="chip-icon">💎</span>
           <span id="totalXp">0</span>
         </div>
+        <div class="stat-chip coins" title="Altın - güçler için harca">
+          <span class="chip-icon">🪙</span>
+          <span id="coins">0</span>
+        </div>
         <div class="stat-chip streak" title="Üst üste doğru">
           <span class="chip-icon">🔥</span>
           <span id="streak">0</span>
@@ -107,6 +111,25 @@
 
       <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
 
+      <!-- Güçler -->
+      <div class="powerups">
+        <button class="pu-btn" data-pu="fifty"  title="Yanlış bir şıkkı sil">
+          <span class="pu-icon">🔮</span>
+          <span class="pu-name">Yarı Yarıya</span>
+          <span class="pu-cost">🪙 3</span>
+        </button>
+        <button class="pu-btn" data-pu="second" title="İkinci şansın olur">
+          <span class="pu-icon">🛟</span>
+          <span class="pu-name">İkinci Şans</span>
+          <span class="pu-cost">🪙 5</span>
+        </button>
+        <button class="pu-btn" data-pu="hint" title="İpucu göster">
+          <span class="pu-icon">💡</span>
+          <span class="pu-name">İpucu</span>
+          <span class="pu-cost">🪙 2</span>
+        </button>
+      </div>
+
       <div id="quizCard" class="quiz-card">
         <div class="quiz-tag" id="quizTag">Kelime</div>
         <div class="quiz-question" id="quizQuestion">—</div>
@@ -131,6 +154,7 @@
           <div class="rstat"><span class="rstat-icon">✅</span><span id="rCorrect">0</span> Doğru</div>
           <div class="rstat"><span class="rstat-icon">❌</span><span id="rWrong">0</span> Yanlış</div>
           <div class="rstat"><span class="rstat-icon">💎</span><span id="rXp">+0</span> XP</div>
+          <div class="rstat"><span class="rstat-icon">🪙</span><span id="rCoins">+0</span> Altın</div>
           <div class="rstat"><span class="rstat-icon">🔥</span><span id="rStreak">0</span> En iyi seri</div>
         </div>
         <div id="newBadgesWrap" class="new-badges hidden">

@@ -84,7 +84,65 @@ button {
   box-shadow: var(--shadow);
 }
 .stat-chip.streak { background: linear-gradient(135deg, #ff7a00, #ff3f81); }
+.stat-chip.coins { background: linear-gradient(135deg, #ffce47, #ff9a3c); color: #1b1746; }
 .chip-icon { font-size: 16px; }
+
+/* ----------- Güçler (Power-ups) ----------- */
+.powerups {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pu-btn {
+  background: var(--card-strong);
+  color: var(--text);
+  padding: 10px 6px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 2px solid transparent;
+  font-family: inherit;
+  transition: transform .12s, background .2s, border-color .2s;
+}
+.pu-btn:active { transform: scale(.95); }
+.pu-btn:hover { border-color: rgba(255,255,255,.2); }
+.pu-icon { font-size: 22px; }
+.pu-name { font-size: 11px; font-weight: 800; }
+.pu-cost { font-size: 11px; color: var(--accent); font-weight: 700; }
+.pu-btn.disabled, .pu-btn:disabled {
+  opacity: .35;
+  pointer-events: none;
+  filter: grayscale(.6);
+}
+.pu-btn.used {
+  background: rgba(46,204,113,.18);
+  border-color: var(--green);
+  pointer-events: none;
+}
+.pu-btn.used .pu-cost::after { content: " ✓"; }
+.pu-btn.flash {
+  animation: puFlash .5s ease-out;
+}
+@keyframes puFlash {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(255,206,71,0); }
+  50% { transform: scale(1.1); box-shadow: 0 0 24px rgba(255,206,71,.7); }
+  100% { transform: scale(1); }
+}
+
+.option.eliminated {
+  opacity: .25;
+  text-decoration: line-through;
+  pointer-events: none;
+  filter: blur(.4px);
+}
+.option.second-tried {
+  opacity: .4;
+  pointer-events: none;
+  text-decoration: line-through;
+}
 
 /* ----------- XP barı ----------- */
 .xp-bar-wrap { position: relative; margin: 10px 0 20px; }

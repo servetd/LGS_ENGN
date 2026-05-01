@@ -12,7 +12,9 @@
   const QUESTIONS_PER_ROUND = 10;
   const XP_PER_CORRECT = 10;
   const XP_STREAK_BONUS = 5;       // Her 3 doğruda bir bonus
+  const COINS_PER_CORRECT = 1;     // Her doğru cevapta +1 altın
   const DAILY_GOAL = 20;           // Günlük doğru hedefi
+  const POWERUP_COSTS = { fifty: 3, second: 5, hint: 2 };
   const LEVEL_TITLES = [
     "Çırak", "Acemi", "Öğrenen", "Bilgin", "Usta",
     "Şampiyon", "Efsane", "LGS Kralı"
@@ -33,13 +35,16 @@
     { id: "stem_master",  name: "Soru Kökü Ustası", desc: "1 turda 10/10 soru kökü",     emoji: "🎯", check: s => s.perfectStem },
     { id: "sent_master",  name: "Cümle Ustası",     desc: "1 turda 10/10 cümle",         emoji: "💬", check: s => s.perfectSentence },
     { id: "daily_done",   name: "Günü Bitirdim",    desc: "Günlük hedefi tamamladın",    emoji: "🌈", check: s => s.dailyGoalsHit >= 1 },
-    { id: "all_themes",   name: "Tüm Temalar",      desc: "Her tema için en az 1 tur",   emoji: "🌍", check: s => Object.keys(s.themesPlayed||{}).length >= 10 }
+    { id: "all_themes",   name: "Tüm Temalar",      desc: "Her tema için en az 1 tur",   emoji: "🌍", check: s => Object.keys(s.themesPlayed||{}).length >= 10 },
+    { id: "rich",         name: "Zengin",           desc: "50 altın biriktirdin",        emoji: "💰", check: s => (s.maxCoins||0) >= 50 },
+    { id: "powerup_user", name: "Güç Avcısı",       desc: "Bir gücü ilk kez kullandın",  emoji: "🔮", check: s => s.usedPowerup }
   ];
 
   /* ---------- State ve persistence ---------- */
   const STORAGE_KEY = "lgs_eng_progress_v1";
   const defaultState = {
     totalXp: 0,
+    coins: 0,
     level: 1,
     streak: 0,
     bestStreak: 0,
@@ -48,6 +53,8 @@
     perfectVocab: false,
     perfectStem: false,
     perfectSentence: false,
+    usedPowerup: false,
+    maxCoins: 0,
     dailyDate: todayKey(),
     dailyCorrect: 0,
     dailyGoalsHit: 0,
@@ -112,6 +119,7 @@
   function refreshTopBar() {
     const info = computeLevel();
     $("#totalXp").textContent = state.totalXp;
+    $("#coins").textContent = state.coins;
     $("#streak").textContent = state.streak;
     $("#levelNumber").textContent = state.level;
     $("#levelTitle").textContent = LEVEL_TITLES[Math.min(state.level - 1, LEVEL_TITLES.length - 1)];
@@ -252,6 +260,11 @@
 
     $("#comboBadge").textContent = "x" + currentQuiz.combo;
 
+    // İpucu metnini varsayılana sıfırla
+    const tip = $("#quizTip");
+    tip.style.color = "";
+    tip.style.fontWeight = "";
+
     if (q.kind === "vocab") {
       $("#quizTag").textContent = "Kelime";
       $("#quizQuestion").textContent = q.en;
@@ -273,13 +286,89 @@
     choices.forEach((c, i) => {
       const btn = document.createElement("button");
       btn.className = "option";
+      btn.dataset.correct = c.correct ? "1" : "0";
       btn.innerHTML = `<span class="opt-letter">${letters[i]}</span><span class="opt-text">${escapeHtml(c.text)}</span>`;
       btn.addEventListener("click", () => onAnswer(btn, c.correct, q));
       wrap.appendChild(btn);
     });
 
+    // Güç durumlarını yeni soru için sıfırla
+    currentQuiz.powerupsUsed = { fifty: false, second: false, hint: false };
+    currentQuiz.secondChanceActive = false;
+    refreshPowerups();
+
     $("#feedback").classList.add("hidden");
     $("#quizCard").classList.remove("hidden");
+  }
+
+  /* ---------- Güçler (Power-ups) ---------- */
+  function refreshPowerups() {
+    $$(".pu-btn").forEach(btn => {
+      const key = btn.dataset.pu;
+      const used = currentQuiz && currentQuiz.powerupsUsed && currentQuiz.powerupsUsed[key];
+      const cost = POWERUP_COSTS[key];
+      btn.classList.toggle("used", !!used);
+      btn.classList.toggle("disabled", !used && state.coins < cost);
+    });
+  }
+
+  function setupPowerups() {
+    $$(".pu-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (!currentQuiz) return;
+        const key = btn.dataset.pu;
+        if (currentQuiz.powerupsUsed[key]) return;
+        const cost = POWERUP_COSTS[key];
+        if (state.coins < cost) {
+          // Yetersiz altın -> kısa uyarı
+          flashTip(`Yetersiz altın! Bu güç için ${cost} 🪙 gerekli.`);
+          return;
+        }
+        state.coins -= cost;
+        state.usedPowerup = true;
+        currentQuiz.powerupsUsed[key] = true;
+        btn.classList.add("flash");
+        setTimeout(() => btn.classList.remove("flash"), 500);
+        applyPowerup(key);
+        saveState();
+        refreshTopBar();
+        refreshPowerups();
+      });
+    });
+  }
+
+  function applyPowerup(key) {
+    const q = currentQuiz.questions[currentQuiz.idx];
+    if (key === "fifty") {
+      // Yanlış şıklardan rastgele birini sil
+      const wrongOpts = $$(".option").filter(o =>
+        o.dataset.correct === "0" && !o.classList.contains("eliminated")
+      );
+      if (wrongOpts.length === 0) return;
+      const pick = wrongOpts[Math.floor(Math.random() * wrongOpts.length)];
+      pick.classList.add("eliminated");
+    } else if (key === "second") {
+      currentQuiz.secondChanceActive = true;
+      flashTip("🛟 İkinci şansın aktif! İlk yanlışta tur kapanmaz.");
+    } else if (key === "hint") {
+      let hint = "";
+      if (q.kind === "vocab") {
+        hint = `İlk harf: "${q.tr.charAt(0).toUpperCase()}…"`;
+      } else if (q.kind === "sentence") {
+        const words = q.tr.split(/\s+/).slice(0, 2).join(" ");
+        hint = `Cümle şöyle başlıyor: "${words}…"`;
+      } else if (q.kind === "stem") {
+        hint = q.tip || "Soru köküne göre olumlu/olumsuz farkına dikkat et!";
+      }
+      flashTip("💡 " + hint);
+    }
+  }
+
+  function flashTip(text) {
+    const tip = $("#quizTip");
+    tip.textContent = text;
+    tip.style.color = "#ffce47";
+    tip.style.fontWeight = "700";
   }
 
   function buildChoices(q) {
@@ -321,6 +410,14 @@
 
   /* ---------- Cevap işleme ---------- */
   function onAnswer(btn, correct, q) {
+    // İkinci şans aktif ve yanlış cevaplandıysa: tur kapanmaz, sadece bu şık silinir
+    if (!correct && currentQuiz.secondChanceActive) {
+      currentQuiz.secondChanceActive = false; // tek seferlik
+      btn.classList.add("second-tried", "shake");
+      flashTip("🛟 Tekrar dene! Bir şansın daha var.");
+      return;
+    }
+
     $$(".option").forEach(o => o.classList.add("disabled"));
 
     if (correct) {
@@ -343,6 +440,9 @@
       if (currentQuiz.streak > 0 && currentQuiz.streak % 3 === 0) gain += XP_STREAK_BONUS;
       currentQuiz.gainedXp += gain;
       state.totalXp += gain;
+      state.coins += COINS_PER_CORRECT;
+      if (state.coins > (state.maxCoins || 0)) state.maxCoins = state.coins;
+      currentQuiz.gainedCoins = (currentQuiz.gainedCoins || 0) + COINS_PER_CORRECT;
 
       playBeep(660, 0.06);
       setTimeout(() => playBeep(880, 0.07), 80);
@@ -422,6 +522,7 @@
     $("#rCorrect").textContent = currentQuiz.correct;
     $("#rWrong").textContent = currentQuiz.wrong;
     $("#rXp").textContent = "+" + currentQuiz.gainedXp;
+    $("#rCoins").textContent = "+" + (currentQuiz.gainedCoins || 0);
     $("#rStreak").textContent = currentQuiz.bestStreak;
 
     const ratio = currentQuiz.correct / currentQuiz.questions.length;
@@ -584,6 +685,7 @@
   function init() {
     renderThemeGrid();
     setupModeButtons();
+    setupPowerups();
     refreshTopBar();
   }
   init();
