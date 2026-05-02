@@ -60,6 +60,10 @@
     dailyGoalsHit: 0,
     badges: {},
     themesPlayed: {},
+    themeStats: {},   // { themeKey: { correct, wrong } }
+    modeStats: {},    // { vocab|stem|sentence: { correct, wrong } }
+    missed: {},       // { "kind:en": { en, tr, kind, themeKey, count, lastWrong } }
+    history: {},      // { "YYYY-M-D": { correct, wrong } } - last 30 days
     selectedTheme: "all"
   };
 
@@ -184,6 +188,7 @@
       btn.addEventListener("click", () => {
         const mode = btn.dataset.mode;
         if (mode === "badges") return showBadges();
+        if (mode === "report") return showReport();
         startQuiz(mode);
       });
     });
@@ -408,6 +413,52 @@
     return pool.slice(0, 4);
   }
 
+  /* ---------- İstatistik kaydı (rapor için) ---------- */
+  function recordStat(q, correct) {
+    const themeKey = q.themeKey || "stem";
+    const kind = q.kind;
+    const day = todayKey();
+
+    state.themeStats[themeKey] = state.themeStats[themeKey] || { correct: 0, wrong: 0 };
+    state.modeStats[kind]      = state.modeStats[kind]      || { correct: 0, wrong: 0 };
+    state.history[day]         = state.history[day]         || { correct: 0, wrong: 0 };
+
+    if (correct) {
+      state.themeStats[themeKey].correct++;
+      state.modeStats[kind].correct++;
+      state.history[day].correct++;
+    } else {
+      state.themeStats[themeKey].wrong++;
+      state.modeStats[kind].wrong++;
+      state.history[day].wrong++;
+      const k = `${kind}:${q.en}`;
+      state.missed[k] = state.missed[k] || { en: q.en, tr: q.tr, kind, themeKey, count: 0 };
+      state.missed[k].count++;
+      state.missed[k].lastWrong = day;
+    }
+
+    // 30 günden eski geçmişi temizle
+    pruneHistory();
+  }
+
+  function pruneHistory() {
+    const keys = Object.keys(state.history);
+    if (keys.length <= 60) return;
+    // basit yaklaşım: tarihleri sıralayıp en yeni 30'unu tut
+    const sorted = keys
+      .map(k => ({ k, d: dayKeyToDate(k) }))
+      .filter(x => x.d)
+      .sort((a, b) => b.d - a.d)
+      .slice(30);
+    sorted.forEach(x => delete state.history[x.k]);
+  }
+
+  function dayKeyToDate(s) {
+    const [y, m, d] = s.split("-").map(n => parseInt(n, 10));
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }
+
   /* ---------- Cevap işleme ---------- */
   function onAnswer(btn, correct, q) {
     // İkinci şans aktif ve yanlış cevaplandıysa: tur kapanmaz, sadece bu şık silinir
@@ -419,6 +470,9 @@
     }
 
     $$(".option").forEach(o => o.classList.add("disabled"));
+
+    // Detaylı istatistik kaydı (rapor için)
+    recordStat(q, correct);
 
     if (correct) {
       btn.classList.add("correct", "glow");
@@ -568,6 +622,227 @@
     showView("badgesView");
   }
 
+  /* ---------- Gelişim Raporu ---------- */
+  $("#reportBack").addEventListener("click", () => goHome());
+
+  function showReport() {
+    const totalC = state.totalCorrect || 0;
+    const totalW = state.totalWrong || 0;
+    const total = totalC + totalW;
+
+    if (total === 0) {
+      $("#reportContent").classList.add("hidden");
+      $("#reportEmpty").classList.remove("hidden");
+      showView("reportView");
+      return;
+    }
+    $("#reportEmpty").classList.add("hidden");
+    $("#reportContent").classList.remove("hidden");
+
+    // Genel başarı
+    const pct = Math.round((totalC / total) * 100);
+    $("#overallPct").textContent = pct + "%";
+    $("#overallCorrect").textContent = totalC;
+    $("#overallWrong").textContent = totalW;
+    $("#overallFill").style.width = pct + "%";
+    $("#overallComment").textContent = overallComment(pct, total);
+
+    // Haftalık çubuklar
+    renderWeekBars();
+
+    // Tema başarısı
+    renderThemeStats();
+
+    // Modül başarısı
+    renderModeStats();
+
+    // En çok hata yapılanlar
+    renderMissedList();
+
+    // Öneri
+    $("#suggestionText").innerHTML = buildSuggestion();
+
+    showView("reportView");
+  }
+
+  function overallComment(pct, total) {
+    if (total < 10) return `Henüz ${total} soru çözdün. Birkaç tur daha sonra rapor daha anlamlı olacak.`;
+    if (pct >= 90) return "Olağanüstü! Bu tempoyu koru, LGS senin için kolay olacak. 🚀";
+    if (pct >= 75) return "Çok iyi gidiyorsun! Zayıf alanlara odaklanırsan mükemmel olursun. 💪";
+    if (pct >= 60) return "Güzel başlangıç. Hatalı sorulara dönüp tekrar et, hızla yükselirsin. 🌱";
+    if (pct >= 40) return "Henüz ısınma aşamasındasın. Her gün 20 doğru hedefini tutturmaya çalış. 🔥";
+    return "Yavaş ama emin adımlarla. Pes etme, her tur seni geliştiriyor. ✨";
+  }
+
+  function renderWeekBars() {
+    const wrap = $("#weekBars");
+    wrap.innerHTML = "";
+    const days = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+      const data = state.history[key] || { correct: 0, wrong: 0 };
+      days.push({ key, d, label: ["P","P","S","Ç","P","C","C"][d.getDay()], data });
+      // ^ Pazar=0 → P, Pzt=1 → P, Sal=2 → S, Çar=3 → Ç, Per=4 → P, Cum=5 → C, Ctsi=6 → C
+    }
+    const maxTotal = Math.max(1, ...days.map(d => d.data.correct + d.data.wrong));
+
+    days.forEach(day => {
+      const total = day.data.correct + day.data.wrong;
+      const ch = total ? Math.round((day.data.correct / maxTotal) * 80) : 0;
+      const wh = total ? Math.round((day.data.wrong   / maxTotal) * 80) : 0;
+      const isToday = sameDay(day.d, today);
+      const dayName = ["Paz","Pzt","Sal","Çar","Per","Cum","Cts"][day.d.getDay()];
+
+      const col = document.createElement("div");
+      col.className = "week-bar";
+      col.innerHTML = `
+        <span class="bar-count">${total || ""}</span>
+        <div class="bar-stack" style="height:${ch+wh}px;">
+          <div class="bar-wrong" style="height:${wh}px;"></div>
+          <div class="bar-correct" style="height:${ch}px;"></div>
+        </div>
+        <span class="bar-day" style="${isToday ? 'color:#ffce47;font-weight:800' : ''}">${dayName}</span>
+      `;
+      wrap.appendChild(col);
+    });
+  }
+
+  function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function renderThemeStats() {
+    const wrap = $("#themeStatsList");
+    wrap.innerHTML = "";
+    const rows = Object.entries(window.VOCAB).map(([key, t]) => {
+      const s = state.themeStats[key] || { correct: 0, wrong: 0 };
+      const total = s.correct + s.wrong;
+      const pct = total ? Math.round((s.correct / total) * 100) : 0;
+      return { key, name: t.nameTr, icon: t.icon, total, pct, s };
+    });
+    // Çalışılmamış olanlar listenin altına; çalışılanlarda zayıftan güçlüye sıralama
+    rows.sort((a, b) => {
+      if (a.total === 0 && b.total === 0) return 0;
+      if (a.total === 0) return 1;
+      if (b.total === 0) return -1;
+      return a.pct - b.pct;
+    });
+    rows.forEach(r => {
+      const cls = r.total === 0 ? "" : (r.pct < 50 ? "low" : r.pct < 75 ? "mid" : "high");
+      const numText = r.total === 0
+        ? `<span style="color:var(--muted);font-style:italic">çalışılmadı</span>`
+        : `<b>${r.s.correct}</b>/${r.total} • <b>${r.pct}%</b>`;
+      const row = document.createElement("div");
+      row.className = "stat-row";
+      row.innerHTML = `
+        <span class="stat-name">${r.icon} ${escapeHtml(r.name)}</span>
+        <div class="stat-bar"><div class="stat-fill ${cls}" style="width:${r.pct}%"></div></div>
+        <span class="stat-num">${numText}</span>
+      `;
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderModeStats() {
+    const wrap = $("#modeStatsList");
+    wrap.innerHTML = "";
+    const modes = [
+      { key: "vocab",    name: "Kelime",     icon: "📚" },
+      { key: "stem",     name: "Soru Kökü",  icon: "🎯" },
+      { key: "sentence", name: "Cümle",      icon: "💬" }
+    ];
+    modes.forEach(m => {
+      const s = state.modeStats[m.key] || { correct: 0, wrong: 0 };
+      const total = s.correct + s.wrong;
+      const pct = total ? Math.round((s.correct / total) * 100) : 0;
+      const cls = total === 0 ? "" : (pct < 50 ? "low" : pct < 75 ? "mid" : "high");
+      const numText = total === 0
+        ? `<span style="color:var(--muted);font-style:italic">çalışılmadı</span>`
+        : `<b>${s.correct}</b>/${total} • <b>${pct}%</b>`;
+      const row = document.createElement("div");
+      row.className = "stat-row";
+      row.innerHTML = `
+        <span class="stat-name">${m.icon} ${m.name}</span>
+        <div class="stat-bar"><div class="stat-fill ${cls}" style="width:${pct}%"></div></div>
+        <span class="stat-num">${numText}</span>
+      `;
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderMissedList() {
+    const wrap = $("#missedList");
+    wrap.innerHTML = "";
+    const items = Object.values(state.missed || {})
+      .filter(m => m.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+    if (items.length === 0) {
+      wrap.innerHTML = `<div class="missed-empty">🎉 Henüz tekrar etmen gereken bir şey yok!</div>`;
+      return;
+    }
+    items.forEach(m => {
+      const tag = m.kind === "vocab" ? "📚" : m.kind === "stem" ? "🎯" : "💬";
+      const row = document.createElement("div");
+      row.className = "missed-row";
+      row.innerHTML = `
+        <div>
+          <div class="missed-en">${tag} ${escapeHtml(m.en)}</div>
+          <div class="missed-tr">→ ${escapeHtml(m.tr)}</div>
+        </div>
+        <div class="missed-count">${m.count} hata</div>
+      `;
+      wrap.appendChild(row);
+    });
+  }
+
+  function buildSuggestion() {
+    const themeRows = Object.entries(state.themeStats)
+      .map(([k, s]) => ({ k, total: s.correct + s.wrong, pct: s.correct + s.wrong ? s.correct / (s.correct + s.wrong) : 1 }))
+      .filter(r => r.total >= 5);
+    const modeRows = Object.entries(state.modeStats)
+      .map(([k, s]) => ({ k, total: s.correct + s.wrong, pct: s.correct + s.wrong ? s.correct / (s.correct + s.wrong) : 1 }))
+      .filter(r => r.total >= 5);
+
+    const tips = [];
+    // Çalışılmamış tema var mı?
+    const untouched = Object.keys(window.VOCAB).filter(k => !state.themeStats[k] || (state.themeStats[k].correct + state.themeStats[k].wrong) === 0);
+    if (untouched.length > 0 && untouched.length < 10) {
+      const t = window.VOCAB[untouched[0]];
+      tips.push(`Henüz <b>${t.nameTr}</b> temasını hiç çalışmadın. Bir tur denemeye ne dersin?`);
+    }
+    if (themeRows.length) {
+      themeRows.sort((a, b) => a.pct - b.pct);
+      const weakest = themeRows[0];
+      if (weakest.pct < 0.7) {
+        const name = window.VOCAB[weakest.k]?.nameTr || weakest.k;
+        tips.push(`En zayıf temam <b>${name}</b> (%${Math.round(weakest.pct*100)}). Bu temada Kelime Avı yapmaya odaklan.`);
+      } else {
+        tips.push(`<b>${window.VOCAB[weakest.k]?.nameTr || weakest.k}</b> bile %${Math.round(weakest.pct*100)} — harika gidiyorsun!`);
+      }
+    }
+    if (modeRows.length) {
+      modeRows.sort((a, b) => a.pct - b.pct);
+      const weakMode = modeRows[0];
+      if (weakMode.pct < 0.7) {
+        const label = weakMode.k === "vocab" ? "Kelime" : weakMode.k === "stem" ? "Soru Kökü" : "Cümle";
+        tips.push(`<b>${label}</b> modülünde başarın %${Math.round(weakMode.pct*100)}. Bugün bu modülde 1-2 tur yap.`);
+      }
+    }
+    // Hatalı item'lar
+    const missedCount = Object.values(state.missed || {}).reduce((a, m) => a + m.count, 0);
+    if (missedCount >= 5) {
+      tips.push(`Toplam <b>${missedCount} hatalı</b> kayıtın var. "Tekrar Etmen Gerekenler" listesindekileri ezberleyince başarın hızla yükselecek.`);
+    }
+    if (tips.length === 0) {
+      tips.push("Harika gidiyorsun! Her gün 20 doğru hedefini tutturmaya çalış. 🌟");
+    }
+    return tips.map(t => `• ${t}`).join("<br>");
+  }
+
   function checkAndUnlockBadges() {
     const newly = [];
     BADGES.forEach(b => {
@@ -582,7 +857,7 @@
 
   /* ---------- Görünüm değiştirici ---------- */
   function showView(id) {
-    ["homeView","quizView","resultView","badgesView"].forEach(v => {
+    ["homeView","quizView","resultView","badgesView","reportView"].forEach(v => {
       const el = document.getElementById(v);
       if (!el) return;
       if (v === id) el.classList.remove("hidden");

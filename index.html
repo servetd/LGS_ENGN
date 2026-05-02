@@ -76,10 +76,15 @@
           <div class="mode-name">Karışık Mod</div>
           <div class="mode-desc">Kelime + soru kökü + cümle</div>
         </button>
-        <button class="mode-card mode-card-wide" data-mode="badges">
+        <button class="mode-card" data-mode="badges">
           <div class="mode-emoji">🏆</div>
           <div class="mode-name">Rozetlerim</div>
           <div class="mode-desc">Kazandığın başarılar</div>
+        </button>
+        <button class="mode-card" data-mode="report">
+          <div class="mode-emoji">📊</div>
+          <div class="mode-name">Gelişim Raporu</div>
+          <div class="mode-desc">Güçlü ve zayıf alanların</div>
         </button>
       </div>
 
@@ -176,6 +181,71 @@
         <span></span>
       </div>
       <div id="badgesGrid" class="badges-grid"></div>
+    </main>
+
+    <!-- GELİŞİM RAPORU EKRANI -->
+    <main id="reportView" class="view hidden">
+      <div class="badges-topline">
+        <button class="icon-btn" id="reportBack">← Geri</button>
+        <h2>📊 Gelişim Raporu</h2>
+        <span></span>
+      </div>
+
+      <div id="reportEmpty" class="report-empty hidden">
+        <div class="report-empty-emoji">📭</div>
+        <div class="report-empty-title">Henüz veri yok</div>
+        <div class="report-empty-text">Birkaç tur oyna, rapor burada oluşacak.</div>
+      </div>
+
+      <div id="reportContent">
+        <!-- Genel başarı -->
+        <div class="report-card">
+          <div class="report-card-title">🎯 Genel Başarı</div>
+          <div class="report-overall">
+            <div class="overall-pct" id="overallPct">0%</div>
+            <div class="overall-detail">
+              <span><b id="overallCorrect">0</b> doğru</span>
+              <span><b id="overallWrong">0</b> yanlış</span>
+            </div>
+          </div>
+          <div class="overall-bar"><div id="overallFill" class="overall-fill"></div></div>
+          <div class="report-comment" id="overallComment"></div>
+        </div>
+
+        <!-- 7 günlük aktivite -->
+        <div class="report-card">
+          <div class="report-card-title">📅 Son 7 Gün</div>
+          <div class="week-bars" id="weekBars"></div>
+          <div class="week-legend">
+            <span><span class="dot dot-c"></span> Doğru</span>
+            <span><span class="dot dot-w"></span> Yanlış</span>
+          </div>
+        </div>
+
+        <!-- Tema başarısı -->
+        <div class="report-card">
+          <div class="report-card-title">📚 Tema Başarın</div>
+          <div id="themeStatsList" class="stat-list"></div>
+        </div>
+
+        <!-- Modül başarısı -->
+        <div class="report-card">
+          <div class="report-card-title">🎮 Modül Başarın</div>
+          <div id="modeStatsList" class="stat-list"></div>
+        </div>
+
+        <!-- En çok hata yapılanlar -->
+        <div class="report-card">
+          <div class="report-card-title">🔁 Tekrar Etmen Gerekenler</div>
+          <div id="missedList" class="missed-list"></div>
+        </div>
+
+        <!-- Öneri -->
+        <div class="report-card report-suggestion">
+          <div class="report-card-title">💡 Sana Önerim</div>
+          <div id="suggestionText" class="suggestion-text"></div>
+        </div>
+      </div>
     </main>
 
     <!-- Konfeti katmanı -->
