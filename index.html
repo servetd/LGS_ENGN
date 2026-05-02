@@ -245,8 +245,28 @@
           <div class="report-card-title">💡 Sana Önerim</div>
           <div id="suggestionText" class="suggestion-text"></div>
         </div>
+
+        <!-- Sıfırlama -->
+        <div class="report-card report-danger">
+          <div class="report-card-title">🧹 Yeniden Başla</div>
+          <div class="danger-text">Tüm puanlar, altınlar, rozetler, seviyeler ve istatistikler silinir. Bu işlem geri alınamaz.</div>
+          <button id="resetBtn" class="danger-btn">Verileri Sıfırla</button>
+        </div>
       </div>
     </main>
+
+    <!-- ONAY MODALI -->
+    <div id="confirmModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-emoji">⚠️</div>
+        <div class="modal-title" id="confirmTitle">Emin misin?</div>
+        <div class="modal-text" id="confirmText">Bu işlem geri alınamaz.</div>
+        <div class="modal-buttons">
+          <button id="confirmCancel" class="ghost-btn">Vazgeç</button>
+          <button id="confirmOk" class="danger-btn">Evet, Sıfırla</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Konfeti katmanı -->
     <canvas id="confetti" class="confetti"></canvas>

@@ -624,6 +624,77 @@
 
   /* ---------- Gelişim Raporu ---------- */
   $("#reportBack").addEventListener("click", () => goHome());
+  $("#resetBtn").addEventListener("click", askResetConfirmation);
+
+  /* ---------- Sıfırlama (iki adımlı onay) ---------- */
+  let resetStage = 0;
+  let resetTimer = null;
+
+  function askResetConfirmation() {
+    resetStage = 1;
+    $("#confirmTitle").textContent = "Emin misin?";
+    $("#confirmText").innerHTML =
+      "Tüm <b>puanlar</b>, <b>altınlar</b>, <b>rozetler</b> ve <b>istatistikler</b> silinecek." +
+      "<br><br>Bu işlem <b>geri alınamaz</b>.";
+    $("#confirmOk").textContent = "Evet, devam et";
+    openModal();
+  }
+
+  function askResetFinal() {
+    resetStage = 2;
+    $("#confirmTitle").textContent = "Son onay 🛑";
+    $("#confirmText").innerHTML =
+      "Bu son şansın. Onaylarsan <b>her şey sıfırlanacak</b> ve seviye 1'den başlayacaksın.";
+    $("#confirmOk").textContent = "Evet, sıfırla";
+    // 5 sn içinde başka tıklama yoksa modal otomatik kapansın (yanlış basma koruması)
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(closeModal, 8000);
+  }
+
+  function performReset() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    state = JSON.parse(JSON.stringify(defaultState));
+    state.dailyDate = todayKey();
+    saveState();
+    closeModal();
+    refreshTopBar();
+    // Kısa bir başarı bildirimi
+    showToast("✨ Her şey sıfırlandı. Yeni başlangıç!");
+    goHome();
+  }
+
+  function openModal() {
+    $("#confirmModal").classList.remove("hidden");
+  }
+  function closeModal() {
+    $("#confirmModal").classList.add("hidden");
+    clearTimeout(resetTimer);
+    resetStage = 0;
+  }
+  $("#confirmCancel").addEventListener("click", closeModal);
+  $("#confirmOk").addEventListener("click", () => {
+    if (resetStage === 1) askResetFinal();
+    else if (resetStage === 2) performReset();
+  });
+  // Overlay'e tıklayınca da kapansın (kart hariç)
+  $("#confirmModal").addEventListener("click", (e) => {
+    if (e.target.id === "confirmModal") closeModal();
+  });
+
+  /* ---------- Toast bildirimi ---------- */
+  function showToast(text) {
+    let t = document.getElementById("toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "toast";
+      t.className = "toast";
+      document.body.appendChild(t);
+    }
+    t.textContent = text;
+    t.classList.add("show");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove("show"), 2400);
+  }
 
   function showReport() {
     const totalC = state.totalCorrect || 0;

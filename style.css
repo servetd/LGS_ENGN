@@ -685,6 +685,76 @@ button {
 }
 .suggestion-text b { color: var(--accent); }
 
+/* Sıfırlama bölümü */
+.report-danger {
+  background: rgba(255, 77, 109, 0.08);
+  border: 1px solid rgba(255, 77, 109, 0.25);
+}
+.danger-text {
+  font-size: 12px;
+  color: #ffd0d8;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.danger-btn {
+  background: linear-gradient(135deg, #ff4d6d, #c0392b);
+  color: #fff;
+  font-weight: 800;
+  padding: 12px 22px;
+  border-radius: 100px;
+  font-size: 14px;
+  width: 100%;
+  box-shadow: 0 6px 20px rgba(255, 77, 109, 0.35);
+  transition: transform .12s;
+  font-family: inherit;
+}
+.danger-btn:active { transform: scale(.97); }
+
+/* Onay modalı */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  animation: fadeIn .2s ease-out;
+}
+.modal-card {
+  background: linear-gradient(180deg, #2d1b69, #1b1746);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  padding: 24px 22px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: pop .25s ease-out;
+}
+.modal-emoji { font-size: 48px; }
+.modal-title {
+  font-weight: 900;
+  font-size: 20px;
+  margin: 8px 0 6px;
+}
+.modal-text {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.modal-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.modal-buttons .ghost-btn,
+.modal-buttons .danger-btn { width: 100%; }
+
 /* Boş rapor */
 .report-empty {
   text-align: center;
@@ -693,6 +763,30 @@ button {
 .report-empty-emoji { font-size: 48px; margin-bottom: 8px; }
 .report-empty-title { font-weight: 800; font-size: 18px; }
 .report-empty-text { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+/* Toast bildirimi */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(40px);
+  background: rgba(20, 14, 50, 0.95);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.5);
+  border: 1px solid rgba(255,255,255,.1);
+  opacity: 0;
+  transition: opacity .25s, transform .25s;
+  z-index: 200;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 
 /* ----------- Konfeti ----------- */
 .confetti {
