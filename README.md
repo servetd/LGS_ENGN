@@ -183,12 +183,4 @@ için `file://` üzerinden açmak çalışmaz; küçük bir HTTP sunucusu lazım
 
 ---
 
-## 🙏 Teşekkür
-
-İçeriği yayımlayan **T.C. Millî Eğitim Bakanlığı – Ölçme,
-Değerlendirme ve Sınav Hizmetleri Genel Müdürlüğü**'ne (ÖDSGM)
-teşekkürler.
-
----
-
 Sevgiyle, oğlumun LGS yolculuğuna küçük bir katkı olsun diye. 💜
