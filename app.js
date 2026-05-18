@@ -17,8 +17,13 @@
   const POWERUP_COSTS = { fifty: 3, second: 5, hint: 2 };
   const LEVEL_TITLES = [
     "Çırak", "Acemi", "Öğrenen", "Bilgin", "Usta",
-    "Şampiyon", "Efsane", "LGS Kralı"
+    "Şampiyon", "Efsane", "LGS Kralı", "LGS Efsanesi", "LGS Üstadı"
   ];
+  // Bir sonraki seviyeye geçmek için gereken XP (kümülatif değil; o seviyeden sonraki adım).
+  // Erken seviyelerde motivasyon için hızlı, sonra adım adım yükselir.
+  // L1→L2:120, L2→L3:280, L3→L4:520, L4→L5:850, L5→L6:1300,
+  // L6→L7:1900, L7→L8:2700, L8→L9:3700, L9→L10:5000
+  const LEVEL_STEP_XP = [120, 280, 520, 850, 1300, 1900, 2700, 3700, 5000];
 
   const BADGES = [
     { id: "first_step",   name: "İlk Adım",         desc: "İlk doğru cevabını verdin",  emoji: "👣", check: s => s.totalCorrect >= 1 },
@@ -30,7 +35,8 @@
     { id: "streak20",     name: "Volkan",           desc: "20'lik seri yakaladın",       emoji: "🌟", check: s => s.bestStreak >= 20 },
     { id: "level3",       name: "Yeni Seviye",      desc: "Seviye 3'e ulaştın",          emoji: "🚀", check: s => s.level >= 3 },
     { id: "level5",       name: "Yarı Yolda",       desc: "Seviye 5'e ulaştın",          emoji: "⭐", check: s => s.level >= 5 },
-    { id: "level8",       name: "LGS Kralı",        desc: "En yüksek seviyeye ulaştın",  emoji: "👑", check: s => s.level >= 8 },
+    { id: "level8",       name: "LGS Kralı",        desc: "Seviye 8'e ulaştın",          emoji: "👑", check: s => s.level >= 8 },
+    { id: "level10",      name: "LGS Üstadı",       desc: "En yüksek seviyeye ulaştın",  emoji: "🏅", check: s => s.level >= 10 },
     { id: "vocab_master", name: "Kelime Ustası",    desc: "1 turda 10/10 kelime",        emoji: "📚", check: s => s.perfectVocab },
     { id: "stem_master",  name: "Soru Kökü Ustası", desc: "1 turda 10/10 soru kökü",     emoji: "🎯", check: s => s.perfectStem },
     { id: "sent_master",  name: "Cümle Ustası",     desc: "1 turda 10/10 cümle",         emoji: "💬", check: s => s.perfectSentence },
@@ -94,25 +100,95 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {}
+    // IndexedDB'ye de yaz (mobilde daha kalıcı saklama için).
+    idbPut(state);
+  }
+
+  /* ---------- IndexedDB (kalıcı local veritabanı) ----------
+   * localStorage iOS Safari'de 7 gün inaktiviteden sonra silinebiliyor.
+   * IndexedDB tarayıcılar tarafından daha kalıcı sayılıyor ve PWA olarak
+   * yüklendiğinde kullanıcı silmedikçe duruyor.
+   */
+  const IDB_NAME  = "lgs_eng_db";
+  const IDB_STORE = "state";
+  const IDB_KEY   = "current";
+  let idbConn = null;
+
+  function openIdb() {
+    if (idbConn) return Promise.resolve(idbConn);
+    return new Promise((resolve, reject) => {
+      if (!("indexedDB" in window)) return reject(new Error("idb yok"));
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+      req.onsuccess = () => { idbConn = req.result; resolve(idbConn); };
+      req.onerror = () => reject(req.error);
+    });
+  }
+  function idbPut(value) {
+    openIdb().then(db => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(JSON.parse(JSON.stringify(value)), IDB_KEY);
+    }).catch(() => {});
+  }
+  function idbGet() {
+    return openIdb().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    })).catch(() => null);
+  }
+  function idbClear() {
+    return openIdb().then(db => new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).delete(IDB_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = resolve;
+    })).catch(() => {});
+  }
+
+  // Açılışta IDB'den geri yükle - localStorage temizlendiyse veri kaybolmaz.
+  async function restoreFromIdb() {
+    try {
+      const idbState = await idbGet();
+      if (!idbState) {
+        // localStorage'da veri varsa IDB'ye ilk kez aktar
+        if (state.totalXp || state.totalCorrect) idbPut(state);
+        return;
+      }
+      const idbScore = (idbState.totalCorrect || 0) + (idbState.totalXp || 0);
+      const lsScore  = (state.totalCorrect    || 0) + (state.totalXp    || 0);
+      if (idbScore > lsScore) {
+        state = Object.assign({}, defaultState, idbState);
+        if (state.dailyDate !== todayKey()) {
+          state.dailyDate = todayKey();
+          state.dailyCorrect = 0;
+        }
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        refreshTopBar();
+      }
+    } catch (e) {}
   }
 
   /* ---------- Seviye hesaplama ---------- */
-  // Seviye eşikleri: kümülatif XP. Seviye N için: 100 * N
-  function xpForLevel(n) { return 100 * n; }
-  function totalXpForLevel(n) {
-    let t = 0;
-    for (let i = 1; i < n; i++) t += xpForLevel(i);
-    return t;
+  // Bir sonraki seviye için ne kadar XP gerekiyor (mevcut seviyenin adımı).
+  function xpStepFor(level) {
+    if (level <= 0) return LEVEL_STEP_XP[0];
+    if (level - 1 < LEVEL_STEP_XP.length) return LEVEL_STEP_XP[level - 1];
+    // En üst seviyeyi geçtiyse adım son değerle artarak devam etsin (teorik).
+    return LEVEL_STEP_XP[LEVEL_STEP_XP.length - 1] + (level - LEVEL_STEP_XP.length) * 1500;
   }
   function computeLevel() {
     let lvl = 1;
-    let need = 0;
-    while (state.totalXp >= need + xpForLevel(lvl) && lvl < LEVEL_TITLES.length) {
-      need += xpForLevel(lvl);
+    let acc = 0;
+    while (lvl < LEVEL_TITLES.length) {
+      const need = xpStepFor(lvl);
+      if (state.totalXp < acc + need) break;
+      acc += need;
       lvl++;
     }
     state.level = lvl;
-    return { level: lvl, levelStart: need, levelNeed: xpForLevel(lvl) };
+    return { level: lvl, levelStart: acc, levelNeed: xpStepFor(lvl) };
   }
 
   /* ---------- DOM yardımcıları ---------- */
@@ -653,6 +729,7 @@
 
   function performReset() {
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    idbClear();
     state = JSON.parse(JSON.stringify(defaultState));
     state.dailyDate = todayKey();
     saveState();
@@ -1033,7 +1110,17 @@
     setupModeButtons();
     setupPowerups();
     refreshTopBar();
+    restoreFromIdb();          // IndexedDB'den daha kalıcı veri varsa getir
+    registerServiceWorker();   // PWA / çevrimdışı destek
   }
+
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    // file:// üzerinden açılırsa SW kaydedilemez
+    if (location.protocol !== "http:" && location.protocol !== "https:") return;
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  }
+
   init();
 
 })();
