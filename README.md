@@ -4,7 +4,7 @@
 hazırlanmış, **mobil uyumlu**, **oyunlaştırılmış** bir çalışma uygulaması.
 
 İçerik tamamen MEB'in yayımladığı **2021-2025 LGS İngilizce sınavları**
-ve **resmi deneme sınavlarından** çıkarıldı; üstüne ortaokul seviyesinde
+ve **resmi deneme sınavlarından** baz alınarak oluşturuldu; üstüne ortaokul seviyesinde
 bilinmesi beklenen yakın anlamlı kelimeler eklendi.
 
 🌐 **Canlı uygulama:** https://servetd.github.io/LGS_ENGN/
