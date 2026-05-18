@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#7b61ff" />
+  <meta name="description" content="LGS İngilizce kelime ve soru kökü çalışma uygulaması" />
+  <title>LGS İngilizce Macerası 🚀</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon-512.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-512.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LGS İngilizce" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Üst bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="level-pill">
+          <span class="level-icon">⭐</span>
+          <div class="level-info">
+            <span class="level-label">Seviye</span>
+            <span id="levelNumber">1</span>
+            <span id="levelTitle" class="level-title">Çırak</span>
+          </div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="stat-chip" title="Toplam puan">
+          <span class="chip-icon">💎</span>
+          <span id="totalXp">0</span>
+        </div>
+        <div class="stat-chip coins" title="Altın - güçler için harca">
+          <span class="chip-icon">🪙</span>
+          <span id="coins">0</span>
+        </div>
+        <div class="stat-chip streak" title="Üst üste doğru">
+          <span class="chip-icon">🔥</span>
+          <span id="streak">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- XP barı -->
+    <div class="xp-bar-wrap">
+      <div class="xp-bar"><div id="xpFill" class="xp-fill"></div></div>
+      <span id="xpText" class="xp-text">0 / 100 XP</span>
+    </div>
+
+    <!-- ANA EKRAN: Mod seçimi + Tema seçimi -->
+    <main id="homeView" class="view">
+      <section class="hero">
+        <h1>LGS İngilizce <span class="rocket">🚀</span></h1>
+        <p class="subtitle">Kelimeleri ve soru köklerini çöz, puanları topla, yeni rozetler kazan!</p>
+      </section>
+
+      <h2 class="section-title">🎮 Oyun Modu</h2>
+      <div class="mode-grid">
+        <button class="mode-card" data-mode="vocab">
+          <div class="mode-emoji">📚</div>
+          <div class="mode-name">Kelime Avı</div>
+          <div class="mode-desc">İngilizce kelimenin Türkçe karşılığını seç</div>
+        </button>
+        <button class="mode-card" data-mode="stems">
+          <div class="mode-emoji">🎯</div>
+          <div class="mode-name">Soru Kökü Ustası</div>
+          <div class="mode-desc">İngilizce soru kökünün Türkçesini seç</div>
+        </button>
+        <button class="mode-card" data-mode="sentences">
+          <div class="mode-emoji">💬</div>
+          <div class="mode-name">Cümle Anlama</div>
+          <div class="mode-desc">İngilizce cümlenin Türkçesini seç</div>
+        </button>
+        <button class="mode-card" data-mode="mixed">
+          <div class="mode-emoji">🧩</div>
+          <div class="mode-name">Karışık Mod</div>
+          <div class="mode-desc">Kelime + soru kökü + cümle</div>
+        </button>
+        <button class="mode-card" data-mode="badges">
+          <div class="mode-emoji">🏆</div>
+          <div class="mode-name">Rozetlerim</div>
+          <div class="mode-desc">Kazandığın başarılar</div>
+        </button>
+        <button class="mode-card" data-mode="report">
+          <div class="mode-emoji">📊</div>
+          <div class="mode-name">Gelişim Raporu</div>
+          <div class="mode-desc">Güçlü ve zayıf alanların</div>
+        </button>
+      </div>
+
+      <h2 class="section-title">📂 Tema Seç</h2>
+      <p class="section-hint">Önce bir tema seç, sonra bir oyun modu başlat. <b>Tüm Temalar</b> seçeneğiyle hepsinden karışık çalışabilirsin.</p>
+      <div id="themeGrid" class="theme-grid"></div>
+
+      <div class="motivation-row">
+        <div class="motivation-card">
+          <div class="motivation-icon">🌟</div>
+          <div>
+            <div class="motivation-title">Bugünkü hedefin</div>
+            <div class="motivation-text"><span id="dailyDoneText">0</span> / 20 doğru cevap</div>
+            <div class="mini-bar"><div id="dailyFill" class="mini-fill"></div></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- KUİZ EKRANI -->
+    <main id="quizView" class="view hidden">
+      <div class="quiz-topline">
+        <button id="backBtn" class="icon-btn" aria-label="Geri">← Geri</button>
+        <div class="progress-pill">
+          <span id="qIndex">1</span> / <span id="qTotal">10</span>
+        </div>
+        <div class="combo" id="comboBadge" aria-live="polite">x1</div>
+      </div>
+
+      <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+
+      <!-- Güçler -->
+      <div class="powerups">
+        <button class="pu-btn" data-pu="fifty"  title="Yanlış bir şıkkı sil">
+          <span class="pu-icon">🔮</span>
+          <span class="pu-name">Yarı Yarıya</span>
+          <span class="pu-cost">🪙 3</span>
+        </button>
+        <button class="pu-btn" data-pu="second" title="İkinci şansın olur">
+          <span class="pu-icon">🛟</span>
+          <span class="pu-name">İkinci Şans</span>
+          <span class="pu-cost">🪙 5</span>
+        </button>
+        <button class="pu-btn" data-pu="hint" title="İpucu göster">
+          <span class="pu-icon">💡</span>
+          <span class="pu-name">İpucu</span>
+          <span class="pu-cost">🪙 2</span>
+        </button>
+      </div>
+
+      <div id="quizCard" class="quiz-card">
+        <div class="quiz-tag" id="quizTag">Kelime</div>
+        <div class="quiz-question" id="quizQuestion">—</div>
+        <div class="quiz-tip" id="quizTip"></div>
+        <div id="optionsWrap" class="options"></div>
+      </div>
+
+      <div id="feedback" class="feedback hidden">
+        <div class="feedback-emoji" id="feedbackEmoji">🎉</div>
+        <div class="feedback-text" id="feedbackText">Harika!</div>
+        <div class="feedback-explain" id="feedbackExplain"></div>
+        <button id="nextBtn" class="primary-btn">Devam ➜</button>
+      </div>
+    </main>
+
+    <!-- SONUÇ EKRANI -->
+    <main id="resultView" class="view hidden">
+      <div class="result-card">
+        <div class="result-emoji" id="resultEmoji">🎊</div>
+        <h2 id="resultTitle">Harika iş!</h2>
+        <div class="result-stats">
+          <div class="rstat"><span class="rstat-icon">✅</span><span id="rCorrect">0</span> Doğru</div>
+          <div class="rstat"><span class="rstat-icon">❌</span><span id="rWrong">0</span> Yanlış</div>
+          <div class="rstat"><span class="rstat-icon">💎</span><span id="rXp">+0</span> XP</div>
+          <div class="rstat"><span class="rstat-icon">🪙</span><span id="rCoins">+0</span> Altın</div>
+          <div class="rstat"><span class="rstat-icon">🔥</span><span id="rStreak">0</span> En iyi seri</div>
+        </div>
+        <div id="newBadgesWrap" class="new-badges hidden">
+          <div class="new-badges-title">🎁 Yeni Rozet!</div>
+          <div id="newBadges" class="new-badges-list"></div>
+        </div>
+        <div class="result-buttons">
+          <button id="againBtn" class="primary-btn">🔁 Tekrar Oyna</button>
+          <button id="homeBtn" class="ghost-btn">🏠 Ana Sayfa</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ROZETLER EKRANI -->
+    <main id="badgesView" class="view hidden">
+      <div class="badges-topline">
+        <button class="icon-btn" id="badgesBack">← Geri</button>
+        <h2>🏆 Rozetlerim</h2>
+        <span></span>
+      </div>
+      <div id="badgesGrid" class="badges-grid"></div>
+    </main>
+
+    <!-- GELİŞİM RAPORU EKRANI -->
+    <main id="reportView" class="view hidden">
+      <div class="badges-topline">
+        <button class="icon-btn" id="reportBack">← Geri</button>
+        <h2>📊 Gelişim Raporu</h2>
+        <span></span>
+      </div>
+
+      <div id="reportEmpty" class="report-empty hidden">
+        <div class="report-empty-emoji">📭</div>
+        <div class="report-empty-title">Henüz veri yok</div>
+        <div class="report-empty-text">Birkaç tur oyna, rapor burada oluşacak.</div>
+      </div>
+
+      <div id="reportContent">
+        <!-- Genel başarı -->
+        <div class="report-card">
+          <div class="report-card-title">🎯 Genel Başarı</div>
+          <div class="report-overall">
+            <div class="overall-pct" id="overallPct">0%</div>
+            <div class="overall-detail">
+              <span><b id="overallCorrect">0</b> doğru</span>
+              <span><b id="overallWrong">0</b> yanlış</span>
+            </div>
+          </div>
+          <div class="overall-bar"><div id="overallFill" class="overall-fill"></div></div>
+          <div class="report-comment" id="overallComment"></div>
+        </div>
+
+        <!-- 7 günlük aktivite -->
+        <div class="report-card">
+          <div class="report-card-title">📅 Son 7 Gün</div>
+          <div class="week-bars" id="weekBars"></div>
+          <div class="week-legend">
+            <span><span class="dot dot-c"></span> Doğru</span>
+            <span><span class="dot dot-w"></span> Yanlış</span>
+          </div>
+        </div>
+
+        <!-- Tema başarısı -->
+        <div class="report-card">
+          <div class="report-card-title">📚 Tema Başarın</div>
+          <div id="themeStatsList" class="stat-list"></div>
+        </div>
+
+        <!-- Modül başarısı -->
+        <div class="report-card">
+          <div class="report-card-title">🎮 Modül Başarın</div>
+          <div id="modeStatsList" class="stat-list"></div>
+        </div>
+
+        <!-- En çok hata yapılanlar -->
+        <div class="report-card">
+          <div class="report-card-title">🔁 Tekrar Etmen Gerekenler</div>
+          <div id="missedList" class="missed-list"></div>
+        </div>
+
+        <!-- Öneri -->
+        <div class="report-card report-suggestion">
+          <div class="report-card-title">💡 Sana Önerim</div>
+          <div id="suggestionText" class="suggestion-text"></div>
+        </div>
+
+        <!-- Sıfırlama -->
+        <div class="report-card report-danger">
+          <div class="report-card-title">🧹 Yeniden Başla</div>
+          <div class="danger-text">Tüm puanlar, altınlar, rozetler, seviyeler ve istatistikler silinir. Bu işlem geri alınamaz.</div>
+          <button id="resetBtn" class="danger-btn">Verileri Sıfırla</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ONAY MODALI -->
+    <div id="confirmModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-emoji">⚠️</div>
+        <div class="modal-title" id="confirmTitle">Emin misin?</div>
+        <div class="modal-text" id="confirmText">Bu işlem geri alınamaz.</div>
+        <div class="modal-buttons">
+          <button id="confirmCancel" class="ghost-btn">Vazgeç</button>
+          <button id="confirmOk" class="danger-btn">Evet, Sıfırla</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Konfeti katmanı -->
+    <canvas id="confetti" class="confetti"></canvas>
+  </div>
+
+  <script src="data/vocabulary.js"></script>
+  <script src="data/stems.js"></script>
+  <script src="data/sentences.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
